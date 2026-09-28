@@ -1,3 +1,8 @@
+"""
+Shared dictionary existing for encoding.
+"""
+
+
 from poke_env.battle import PokemonGender
 from poke_env.battle.effect import Effect
 from poke_env.battle.weather import Weather

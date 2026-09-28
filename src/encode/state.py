@@ -1,5 +1,5 @@
 """
-combines all encoding modules (battle, moves, pokemon) into a major encode
+Build the full observation for one turn by combining the Pokémon, move and battle encoders.
 """
 
 
@@ -15,6 +15,23 @@ TEAM_SIZE = 6
 MOVE_SLOTS = 4
 
 def encode_state(battle: DoubleBattle):
+    """
+    Encodes the whole battle for the current turn.
+
+    12 slots, 0-5 is our team and 6-11 is the opponent team. Empty slots are None and get encoded as zeros.
+    Opponent slots use the team preview order so each pokemon stays in the same slot the whole game.
+    When an opponent pokemon gets sent out, its preview entry is replaced with the live one (has HP, status, moves).
+
+    :param battle: the current doubles battle from our side.
+    :return: dict with
+        "feature_version"   FEATURE_VERSION, not used by env.py
+        "pokemon_cont"      (12, POKEMON_FEATURES_CONT) float32
+        "pokemon_cat"       species, items, ability ids, each (12, 1) int64
+        "moves_cont"        (12, 4, MOVE_FEATURES_CONT) float32
+        "moves_cat"         (12, 4, 1) int64 move ids
+        "battle_cont"       (ENVIRONMENT_FEATURES_CONT,) float32
+    """
+
 
     # checks for pokemon if live, if not then use the base species
     live = {p.base_species: p for p in battle.opponent_team.values()}

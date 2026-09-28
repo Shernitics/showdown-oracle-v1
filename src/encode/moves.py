@@ -1,5 +1,6 @@
 """
-encodes a move
+Encodes a single move. Its power, typing, targeting, side effects and remaining PP.
+Each Pokémon has 4 move slots; encode/state.py calls this for every slot on all 12 Pokémon.
 """
 
 
@@ -13,6 +14,31 @@ MOVE_FEATURES_CONT = 92
 MOVE_FEATURES_CAT = 1
 
 def encode_move(move: Move):
+    """
+    Encode one move as a continuous feature plus a move ID for the embedding layer.
+    Every continuous feature is in [0, 1].
+
+    An empty slot (move is None, e.g. unrevealed opponent moves) returns all zeros.
+    Index 0 is a presence flag (always 1.0 for a real move), so the network can tell "no move" apart from a real move whose features are mostly 0.
+
+    Layout (92 floats, in order):
+        [0]         presence flag
+        [1:5]       base power / 250, accuracy, priority, PP left / max PP
+        [5:8]       category one-hot (physical, special, status)
+        [8:27]      type one-hot (poke-env Target order)
+        [27:42]     target one-hot (poke-env Target order)
+        [42:59]     flags
+        [59:66]     stat changes applied to the target
+        [66:73]     stat changes applied to the user
+        [73:81]     status inflicted one-hot
+        [81:86]     expected hits / 5, crit ratio / 6, drain, recoil, heal (fractions of HP)
+        [86:92]     force switch, user switch, breaks protect, is protect, ignores ability, thaws target
+
+    :param move: a poke-env Move, or None for an empty encoding.
+    :return:    {"cont": float32 array of shape (MOVE_FEATURES_CONT,), "cat": {"name": int64 array of shape (1,)}}.
+                "name" is the MOVE_NUM id and 0 means empty slot or unknown move.
+    """
+
 
     if move is None:
         return {

@@ -1,3 +1,9 @@
+"""
+Trains the agent with MaskablePPO against three fixed bots (random, max power, heuristics), one worker each.
+Continues from model/vgc.zip if it exists. Each run trains TOTAL_TIMESTEPS more steps and exits.
+"""
+
+
 import os
 from pathlib import Path
 from functools import partial
@@ -17,17 +23,18 @@ from env import VGCEnv
 from wrapper import DoubleAgentWrapper
 from extractor import VGCExtractor
 from teambuilder import VGCTeams
+from config import FORMAT, STEPS_PER_ENV, TOTAL_TIMESTEPS, SAVE_EVERY
 
-FORMAT = "gen9vgc2025regi"
 TEAM_DIR = Path(__file__).parent / "teams"
 MODEL_DIR = Path(__file__).parent / "model"
 LOG_DIR = Path(__file__).parent / "logs"
-STEPS_PER_ENV = 512
-TOTAL_TIMESTEPS = 84480
-SAVE_EVERY = 10240          # timesteps between checkpoints, a multiple of the rollout
 
 
 class PeriodicSave(BaseCallback):
+    """
+    Saves the model every X steps.
+    Saves to a .tmp.zip first and then renames it, so a crash mid save cannot corrupt vgc.zip.
+    """
 
     def __init__(self, path, every):
         super().__init__()
@@ -89,6 +96,9 @@ def _possible_targets(self, move, pokemon, dynamax=False):
 
 
 def make_env(opponent_cls, seed):
+    """
+    Builds one worker, our VGCEnv against one bot, wrapped for MaskablePPO and battle logging.
+    """
 
     DoubleBattle.get_possible_showdown_targets = _possible_targets   # each worker is its own process
 
@@ -136,7 +146,7 @@ def main():
                 BattleLogger(LOG_DIR / "battles.csv", expected=PLAYERS.values()),
                 PeriodicSave(MODEL_DIR / "vgc", SAVE_EVERY),
             ]),
-            reset_num_timesteps=False,        # keep counting across runs
+            reset_num_timesteps=False,
         )
         MODEL_DIR.mkdir(exist_ok=True)
         model.save(MODEL_DIR / "vgc")

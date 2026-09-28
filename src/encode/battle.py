@@ -1,5 +1,5 @@
 """
-Encodes the battle state
+Encodes the battle state. Everything that belongs to the field or the side rather than to a single Pokémon (turn, weather, field, side conditions, tera).
 """
 
 
@@ -13,6 +13,22 @@ ENVIRONMENT_FEATURES_CONT = 82
 BROUGHT_SIZE = 4
 
 def encode_battle(battle: DoubleBattle):
+    """
+    Encode the field and side state of a doubles battle as a vector.
+    Every feature is in [0, 1]: flags are 0/1, and counts and durations are normalized by caps in vocab.py.
+    Durations are 'turns elapsed since it started / max length'. Poke-env stores the turn each condition started, not the turns left.
+
+    Layout (82 floats, in order):
+        [0:4]       battle: turn / 100, in team preview, own Pokémon left / 4, opponent Pokémon left / 4
+        [4:13]      weather: 8 flags. then the active weather's duration
+        [13:29]     field: 8 flags, then 8 durations
+        [29:69]     side conditions, own then opponent. Each side has 13 flags then 7 durations
+        [69:73]     stackable side conditions, own then opponent
+        [73:82]     tera and turn status: can_tera x2, used_tera (own, opp), force_switch x2, trapped x2, reviving (Revival Blessing)
+
+    :param battle: current poke-env doubles battle, seen from our side.
+    :return: {"cont": float32 array of shape (ENVIRONMENT_FEATURES_CONT,)}, env.py exposes it as the "battle_cont" observation.
+    """
 
     turn = battle.turn
 

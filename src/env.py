@@ -1,3 +1,8 @@
+"""
+VGC doubles environment. Sets up the observation space, turns actions into orders and computes the reward.
+"""
+
+
 import numpy as np
 from gymnasium import spaces
 from poke_env.environment import DoublesEnv
@@ -15,6 +20,23 @@ BROUGHT_SIZE = 4
 
 
 class VGCEnv(DoublesEnv):
+    """
+    Wraps poke-env's DoubleEnv with our own observation and reward.
+
+    Observation: the dict from encode_state, with pokemon_cat split into species / item / ability. 12 slots (own 0-5, opp 6-11), all continuous features in [0, 1].
+
+    Action: inherited from DoublesEnv. MultiDiscrete([107, 107]), one number per active slot (left, right).
+
+        0       pass
+        1-6     switch to team member 1-6
+        7-26    move 1-4, each with 5 targets (-2, -1, 0, 1, 2)
+        27-86   move + mega / z-move / dynamax, not used in gen 9
+        87-106  move 1-4 + terastallize, each with 5 targets
+
+    Targets: -2/-1 = our slots, 0 = no target; 1/2 = opponent slots.
+    Illegal actions are masked.
+    """
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -57,6 +79,10 @@ class VGCEnv(DoublesEnv):
         }
 
     def calc_reward(self, battle) -> float:
+        """
+        Shaped reward from poke-env's reward_computing_helper, weights from config.py.
+        """
+
         return self.reward_computing_helper(
             battle,
             victory_value=VICTORY_VALUE,

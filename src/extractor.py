@@ -1,3 +1,8 @@
+"""
+Feature exctractor for MaskablePPO. Turns the observation dict into one flat vector for the policy and value heads.
+"""
+
+
 from shutil import move
 
 import torch
@@ -17,6 +22,15 @@ POKEMON_HIDDEN = 128
 
 
 class VGCExtractor(BaseFeaturesExtractor):
+    """
+    Each of the 12 pokemon slots is encoded the same way:
+        pokemon cont (110) + species / item / ability embeddings (3x16)
+        + 4 moves, each move cont (92) + move embedding (16)
+        -> Linear(590, 128) + ReLU
+
+    Output: 12 x 128 pokemon vectors flattened + 82 battle features = 1618
+    """
+
 
     def __init__(self, observation_space):
 
