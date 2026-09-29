@@ -4,7 +4,7 @@ Settings for reward and training. Change values here, not in env.py, run.py or t
 
 
 #showdown
-SHOWDOWN_DIR = ...  # where pokemon-showdown is cloned, use full path
+SHOWDOWN_DIR = "SET-ME"  # where pokemon-showdown is cloned, use full path
 
 # reward
 VICTORY_VALUE = 1.0         # + win, - loss
