@@ -14,7 +14,7 @@ STATUS_VALUE = 0.05         # per pokemon with status
 
 # train
 FORMAT = "gen9vgc2025regi"  # showdown format id
-STEPS_PER_ENV = 512         # PPO n_steps. 3 envs with one per opponent -> x3 steps per update
+STEPS_PER_ENV = 512         # PPO n_step
 TOTAL_TIMESTEPS = 84480     # steps per train.py run, not total.
 SAVE_EVERY = 10240          # checkpoint to model/vgc.zip every this many steps
 
