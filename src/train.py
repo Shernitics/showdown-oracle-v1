@@ -1,10 +1,12 @@
 """
 Trains the agent with MaskablePPO against three fixed bots (random, max power, heuristics), one worker each.
-Continues from model/vgc.zip if it exists. Each run trains TOTAL_TIMESTEPS more steps and exits.
+Continues from model/<RUN_NAME>/vgc.zip if it exists. Each run trains up to TOTAL_TIMESTEPS more steps and exits,
+or exits with DONE once TARGET_TIMESTEPS is reached.
 """
 
 
 import os
+import sys
 from pathlib import Path
 from functools import partial
 
@@ -23,11 +25,12 @@ from env import VGCEnv
 from wrapper import DoubleAgentWrapper
 from extractor import VGCExtractor
 from teambuilder import VGCTeams
-from config import FORMAT, STEPS_PER_ENV, TOTAL_TIMESTEPS, SAVE_EVERY
+from config import FORMAT, STEPS_PER_ENV, TOTAL_TIMESTEPS, SAVE_EVERY, RUN_NAME, TARGET_TIMESTEPS, SEED
 
 TEAM_DIR = Path(__file__).parent / "teams"
-MODEL_DIR = Path(__file__).parent / "model"
-LOG_DIR = Path(__file__).parent / "logs"
+MODEL_DIR = Path(__file__).parent / "model" / RUN_NAME
+LOG_DIR = Path(__file__).parent / "logs" / RUN_NAME
+DONE = 3        # exit code for run.py, must match run.py
 
 
 class PeriodicSave(BaseCallback):
@@ -48,7 +51,7 @@ class PeriodicSave(BaseCallback):
             return True
 
         self.last = self.num_timesteps
-        self.path.parent.mkdir(exist_ok=True)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
 
         target = self.path.with_suffix(".zip")
         tmp = target.with_name(target.stem + ".tmp.zip")
@@ -133,22 +136,31 @@ def main():
             vec_env,
             n_steps=STEPS_PER_ENV,
             policy_kwargs={"features_extractor_class": VGCExtractor},
+            seed=SEED,
             verbose=1,
         )
 
     print("extractor:", type(model.policy.features_extractor).__name__)
 
     try:
-        LOG_DIR.mkdir(exist_ok=True)
+        slice_steps = TOTAL_TIMESTEPS
+        if TARGET_TIMESTEPS is not None:        # None = train forever
+            remaining = TARGET_TIMESTEPS - model.num_timesteps
+            if remaining <= 0:
+                print(f"[done]      {model.num_timesteps} steps, target reached")
+                sys.exit(DONE)                  # finally still closes vec_env
+            slice_steps = min(TOTAL_TIMESTEPS, remaining)
+
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
         model.learn(
-            total_timesteps=TOTAL_TIMESTEPS,
+            total_timesteps=slice_steps,
             callback=CallbackList([
                 BattleLogger(LOG_DIR / "battles.csv", expected=PLAYERS.values()),
                 PeriodicSave(MODEL_DIR / "vgc", SAVE_EVERY),
             ]),
             reset_num_timesteps=False,
         )
-        MODEL_DIR.mkdir(exist_ok=True)
+        MODEL_DIR.mkdir(parents=True, exist_ok=True)
         model.save(MODEL_DIR / "vgc")
         repairs = sum(vec_env.get_attr("n_repairs"))
         steps = sum(vec_env.get_attr("n_steps"))
